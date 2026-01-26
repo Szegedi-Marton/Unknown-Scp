@@ -291,6 +291,39 @@ class Music(commands.Cog):
         embed.add_field(name="System", value=f"CPU: {cpu}%\nRAM: {ram:.1f}MB")
         await interaction.response.send_message(embed=embed)
 
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        # If the bot itself is moved or disconnected, we don't need to run this logic
+        if member.id == self.bot.user.id:
+            return
+
+        # Get the voice client for this guild
+        vc = member.guild.voice_client
+
+        # If the bot is not connected to voice, do nothing
+        if not vc or not vc.channel:
+            return
+
+        # Check if the channel the bot is in is the one that was left
+        if before.channel and before.channel.id == vc.channel.id:
+            # Count non-bot members
+            non_bot_members = [m for m in vc.channel.members if not m.bot]
+
+            # If only the bot is left
+            if len(non_bot_members) == 0:
+                # Wait 10 seconds
+                await asyncio.sleep(10)
+
+                # Check again after 10 seconds to make sure it's still empty
+                if vc.channel:
+                    non_bot_members = [m for m in vc.channel.members if not m.bot]
+                    if len(non_bot_members) == 0:
+                        # Optional: Send a message to the music channel
+                        # player = self.players.get(member.guild.id)
+                        # if player: await player._channel.send("👋 Leaving the channel as it is empty.")
+
+                        await self.cleanup(member.guild)
+
 
 # --------------------------
 # SETUP FUNCTION
