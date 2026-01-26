@@ -179,48 +179,54 @@ class Music(commands.Cog):
 
         player = self.get_player(interaction)
 
-        # Special options for the initial playlist scan
-        # 'extract_flat' ensures we get the list items without a 403 error or slow loading
+        # 1. Determine if the input is a URL or a search query
+        # If it doesn't start with http, we add 'ytsearch:' to tell yt-dlp to search
+        is_url = search.startswith(('http://', 'https://'))
+        query = search if is_url else f"ytsearch1:{search}"
+
         ydl_opts = {
-            'extract_flat': 'in_playlist',
+            'extract_flat': 'in_playlist' if is_url else False,  # Don't use extract_flat for searches
             'skip_download': True,
-            'yes_playlist': True,
+            'yes_playlist': True if is_url else False,
             'playlist_items': '1-25',
             'quiet': True,
+            'default_search': 'ytsearch',  # Fallback search engine
         }
 
         try:
             loop = self.bot.loop or asyncio.get_event_loop()
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # We do NOT use process=False here because we want to see the entries list
-                data = await loop.run_in_executor(None, lambda: ydl.extract_info(search, download=False))
+                data = await loop.run_in_executor(None, lambda: ydl.extract_info(query, download=False))
 
             if not data:
                 return await interaction.followup.send("❌ Could not find anything.")
 
-            if 'entries' in data:
-                # Use a list comprehension to strictly filter out None or Private entries
-                entries = [e for e in data['entries'] if e is not None and e.get('id')]
+            # 2. Handle Search Results
+            # ytsearch results are returned as a playlist (entries) containing one item
+            if not is_url and 'entries' in data:
+                if not data['entries']:
+                    return await interaction.followup.send("❌ No results found.")
+                data = data['entries'][0]  # Take the first result from the search
 
+            # 3. Handle Actual Playlists/Mixes (URLs only)
+            if 'entries' in data and is_url:
+                entries = [e for e in data['entries'] if e is not None and e.get('id')]
                 if not entries:
                     return await interaction.followup.send("❌ All videos in this playlist are unavailable.")
 
                 for entry in entries:
-                    # Construct URL using ID to ensure it stays within the context of the list
                     video_id = entry.get('id')
-                    # We keep the list ID in the URL to help YouTube understand the context
                     url = f"https://www.youtube.com/watch?v={video_id}"
                     title = entry.get('title') or "Unknown Title"
-
                     await player.queue.put(url)
                     self.titles[url] = title
 
                 await interaction.followup.send(
                     f"✅ Loaded **{len(entries)}** tracks from the Mix/Playlist: **{data.get('title')}**")
 
-            # Fallback: It's just a single video (no playlist entries found)
+            # 4. Handle Single Video (or the result from our search)
             else:
-                url = data.get('webpage_url') or data.get('url') or search
+                url = data.get('webpage_url') or data.get('url')
                 title = data.get('title') or "Unknown Title"
                 await player.queue.put(url)
                 self.titles[url] = title
