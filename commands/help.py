@@ -8,7 +8,7 @@ class Help(commands.Cog):
         self.bot = bot
         self.available_commands = [
             'about', 'help', 'ping', 'filter', 'ban',
-            'clear', 'kick', 'isdown', 'channelSet', 'serverAdd'
+            'clear', 'kick', 'play', 'stop', 'skip', 'queue'
         ]
 
     # --- AUTOCOMPLETE LOGIC ---
@@ -29,7 +29,8 @@ class Help(commands.Cog):
                 description="Use `/help [command]` for detailed info.",
                 color=discord.Color.dark_red()
             )
-            embed.add_field(name="🌐 General", value="`about`, `help`, `isdown`, `ping`")
+            embed.add_field(name="🌐 General", value="`about`, `help`, `ping`")
+            embed.add_field(name="🎵 Music", value="`play`, `skip`, `queue`, `stop`")
             embed.add_field(name="🛡️ Admin", value="`filter`, `ban`, `clear`, `kick`")
             return await interaction.response.send_message(embed=embed)
 
@@ -37,14 +38,65 @@ class Help(commands.Cog):
         embed = discord.Embed(title=f"Help: {command}", color=discord.Color.blue())
 
         if command == 'ping':
-            embed.add_field(name="Description", value="Checks bot latency or service status with `/ping` or `/isdown`.")
+            embed.add_field(
+                name="Description",
+                value="Checks bot latency or service status with `/ping`."
+            )
+
         elif command == 'filter':
-            embed.add_field(name="Description", value="Manage filtered words using the `/filter` options.")
+            embed.add_field(
+                name="Description",
+                value="Manage filtered words using the `/filter` options."
+            )
+
         elif command == 'about':
-            embed.add_field(name="Description", value="Shows bot version and developer info.")
+            embed.add_field(
+                name="Description",
+                value="Shows bot version and developer info."
+            )
+
         elif command == 'clear':
-            embed.add_field(name="Description", value="Clears a specific amount of messages.")
-        # ... add other elif statements for your other commands here ...
+            embed.add_field(
+                name="Description",
+                value="Clears a specific amount of messages."
+            )
+
+        elif command == 'ban':
+            embed.add_field(
+                name="Description",
+                value="Bans a user from the server using `/ban`."
+            )
+
+        elif command == 'kick':
+            embed.add_field(
+                name="Description",
+                value="Kicks a user from the server using `/kick`."
+            )
+
+        elif command == 'play':
+            embed.add_field(
+                name="Description",
+                value="Plays music from the web using `/play <song or URL>`."
+            )
+
+        elif command == 'skip':
+            embed.add_field(
+                name="Description",
+                value="Skips the currently playing song with `/skip`."
+            )
+
+        elif command == 'stop':
+            embed.add_field(
+                name="Description",
+                value="Stops playback and disconnects the bot using `/stop`."
+            )
+
+        elif command == 'queue':
+            embed.add_field(
+                name="Description",
+                value="Shows the upcoming songs in the queue with `/queue`."
+            )
+
         else:
             return await interaction.response.send_message(f"No specific help found for `{command}`.", ephemeral=True)
 
