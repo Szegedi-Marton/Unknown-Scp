@@ -1,0 +1,26 @@
+# --- Discord Bot Secrets ---
+.env
+config.json
+tokens.txt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.conda/
+.idea/
+
+# --- Music Bot Specifics ---
+*.mp3
+*.m4a
+*.webm
+youtube_cookies.txt
+*.png
+*.jpg
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
