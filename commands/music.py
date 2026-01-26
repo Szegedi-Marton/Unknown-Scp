@@ -9,7 +9,7 @@ from async_timeout import timeout
 # CONFIGURATION
 # --------------------------
 ytdl_format_options = {
-    'cookiefile': 'cookies.txt',
+   # 'cookiefile': 'cookies.txt',
     'format': 'bestaudio/best',
     'restrictfilenames': True,
     'noplaylist': True,
