@@ -5,9 +5,20 @@ from modules.filter_module import filtered_words
 def register_events(bot):
     @bot.event
     async def on_ready():
-        await bot.tree.sync()
-        await bot.change_presence(status=discord.Status.invisible)
-        print(f'Logged in as {bot.user}')
+        # 1. Calculate your server count
+        server_count = len(bot.guilds)
+
+        # 2. Set the activity to Streaming
+        # The 'url' must be a Twitch or YouTube link for the purple icon to show!
+        activity = discord.Streaming(
+            name=f"to {server_count:,} servers",
+            url="https://www.twitch.tv/discord"
+        )
+
+        # 3. Apply the presence
+        await bot.change_presence(activity=activity)
+
+        print(f'Logged in as {bot.user} | Active on {server_count} servers')
 
     @bot.event
     async def on_guild_join(guild):
