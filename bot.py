@@ -3,6 +3,7 @@ from discord.ext import commands
 from config import DISCORD_TOKEN
 from events import register_events
 from modules.filter_module import load_filtered_words
+from modules.lyrics_module import load_lyrics_settings
 from commands import register_commands
 
 
@@ -19,6 +20,7 @@ class MyBot(commands.Bot):
         """
         # Load data
         load_filtered_words()
+        load_lyrics_settings()
 
         await register_commands(self)
         register_events(self)

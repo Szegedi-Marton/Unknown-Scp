@@ -8,6 +8,7 @@ from .polls import setup_polls
 from .countdown import setup_countDwn
 from .reminder import setup_reminder
 from .user_info import setup_userInf
+from .lyrics import setup_lyrics
 
 
 async def register_commands(bot):
@@ -22,3 +23,4 @@ async def register_commands(bot):
     await setup_countDwn(bot)
     await setup_polls(bot)
     await setup_userInf(bot)
+    await setup_lyrics(bot)
