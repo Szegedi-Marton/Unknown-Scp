@@ -4,7 +4,11 @@ from discord.ext import commands
 from discord import app_commands
 import yt_dlp
 import asyncio
+import random
 from async_timeout import timeout
+from config import spotify_client_id, spotify_client_secret
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 
 # --------------------------
 # CONFIGURATION
@@ -39,9 +43,26 @@ ffmpeg_options = {
         '-buffer_size 512k'
     ),
 }
-
 ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 
+# Initialize Spotify client
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=spotify_client_id,
+    client_secret=spotify_client_secret
+))
+
+def get_spotify_tracks(url):
+    """Extracts track names from a Spotify playlist URL."""
+    playlist_id = url.split('/')[-1].split('?')[0]
+    results = sp.playlist_items(playlist_id)
+    tracks = []
+
+    for item in results['items']:
+        track = item['track']
+        # Create a search string: "Artist Name - Song Name"
+        tracks.append(f"{track['artists'][0]['name']} - {track['name']}")
+
+    return tracks
 
 # --------------------------
 # YOUTUBE SOURCE HANDLER
@@ -166,9 +187,12 @@ class Music(commands.Cog):
             self.players[interaction.guild_id] = player
         return player
 
-    @app_commands.command(name='play', description='Plays a song, playlist, or YouTube Mix')
-    @app_commands.describe(search="The song name, URL, playlist, or Mix link")
-    async def play(self, interaction: discord.Interaction, search: str):
+    @app_commands.command(name='play', description='Plays a song or playlist')
+    @app_commands.describe(
+        search="The song name, URL, playlist (YouTube or Spotify)",
+        shuffle="Shuffle the playlist before adding to queue?"
+    )
+    async def play(self, interaction: discord.Interaction, search: str, shuffle: bool = False):
         await interaction.response.defer()
 
         if not interaction.user.voice:
@@ -179,18 +203,37 @@ class Music(commands.Cog):
 
         player = self.get_player(interaction)
 
+        # Handle Spotify
+        if "spotify.com" in search:
+            try:
+                track_names = get_spotify_tracks(search)
+                track_names = track_names[:25]
+
+                if shuffle:
+                    random.shuffle(track_names)  # Shuffle Spotify tracks
+
+                for track in track_names:
+                    query = f"ytsearch1:{track}"
+                    await player.queue.put(query)
+                    self.titles[query] = track
+
+                return await interaction.followup.send(
+                    f"✅ Loaded **{len(track_names)}** tracks from Spotify {'(Shuffled) ' if shuffle else ''}into the queue.")
+            except Exception as e:
+                return await interaction.followup.send(f"❌ Spotify Error: {e}")
+
+
         # 1. Determine if the input is a URL or a search query
-        # If it doesn't start with http, we add 'ytsearch:' to tell yt-dlp to search
         is_url = search.startswith(('http://', 'https://'))
         query = search if is_url else f"ytsearch1:{search}"
 
         ydl_opts = {
-            'extract_flat': 'in_playlist' if is_url else False,  # Don't use extract_flat for searches
+            'extract_flat': 'in_playlist' if is_url else False,
             'skip_download': True,
             'yes_playlist': True if is_url else False,
             'playlist_items': '1-25',
             'quiet': True,
-            'default_search': 'ytsearch',  # Fallback search engine
+            'default_search': 'ytsearch',
         }
 
         try:
@@ -202,17 +245,19 @@ class Music(commands.Cog):
                 return await interaction.followup.send("❌ Could not find anything.")
 
             # 2. Handle Search Results
-            # ytsearch results are returned as a playlist (entries) containing one item
             if not is_url and 'entries' in data:
                 if not data['entries']:
                     return await interaction.followup.send("❌ No results found.")
-                data = data['entries'][0]  # Take the first result from the search
+                data = data['entries'][0]
 
             # 3. Handle Actual Playlists/Mixes (URLs only)
             if 'entries' in data and is_url:
                 entries = [e for e in data['entries'] if e is not None and e.get('id')]
                 if not entries:
                     return await interaction.followup.send("❌ All videos in this playlist are unavailable.")
+
+                if shuffle:
+                    random.shuffle(entries)  # Shuffle YouTube entries
 
                 for entry in entries:
                     video_id = entry.get('id')
@@ -234,6 +279,7 @@ class Music(commands.Cog):
 
         except Exception as e:
             await interaction.followup.send(f"❌ Error: {e}")
+
 
     @app_commands.command(name='skip', description='Skips the current song')
     async def skip(self, interaction: discord.Interaction):

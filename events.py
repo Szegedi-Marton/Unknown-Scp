@@ -1,24 +1,25 @@
 import discord
 from modules.filter_module import filtered_words
+from discord.ext import tasks
 
 
 def register_events(bot):
     @bot.event
     async def on_ready():
-        # 1. Calculate your server count
-        server_count = len(bot.guilds)
+        await update_status()
+        await bot.tree.sync()
+        print(f'Logged in as {bot.user}')
 
-        # 2. Set the activity to Streaming
-        # The 'url' must be a Twitch or YouTube link for the purple icon to show!
+
+    @tasks.loop(hours=1)
+    async def update_status():
+        server_count = len(bot.guilds)
         activity = discord.Streaming(
-            name=f"to {server_count:,} servers",
+            name=f"Connected across {server_count:,} servers 🌍",
             url="https://www.twitch.tv/discord"
         )
-
-        # 3. Apply the presence
         await bot.change_presence(activity=activity)
 
-        print(f'Logged in as {bot.user} | Active on {server_count} servers')
 
     @bot.event
     async def on_guild_join(guild):
@@ -30,7 +31,7 @@ def register_events(bot):
             description="*Unlock the potential* with **UnknownScp**",
             color=discord.Color.dark_purple()
         )
-        embed.add_field(name="Getting started", value="Create a private setup channel...", inline=False)
+        embed.add_field(name="Getting started", value="Try out my /help command", inline=False)
         embed.set_footer(text="This message should be sent when you added the bot")
 
         if owner.dm_channel is None:
@@ -67,10 +68,6 @@ def register_events(bot):
 
         # 3. Handle DM Messages
         if isinstance(message.channel, discord.DMChannel):
-            if message.content.startswith("!channelSet"):
-                await bot.process_commands(message)
-                return
-            else:
                 embed = discord.Embed(
                     title="Oh-Oh you shouldn't be here~",
                     description="Use !help on a server channel.",
@@ -79,6 +76,4 @@ def register_events(bot):
                 await message.channel.send(embed=embed)
                 return
 
-        # 4. Process Commands (Crucial Step!)
-        # If the message wasn't deleted by the filter, process it as a command
         await bot.process_commands(message)
